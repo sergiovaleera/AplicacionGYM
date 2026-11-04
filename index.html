@@ -55,7 +55,6 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outli
 .th{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none;display:block}.ph{display:flex;align-items:center;justify-content:center;padding:5px}.ph svg{width:100%;height:100%}.ph.lg{padding:14px}.th.lg{width:100%;height:auto;aspect-ratio:16/10;border-radius:14px;font-size:56px}
 .bar{height:6px;background:var(--bg);border-radius:9px;margin:5px 0;overflow:hidden}.bar i{display:block;height:100%;border-radius:9px}
 .fl{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0}.fc{flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:6px 14px;min-height:36px;font-size:14px}.fc.on{background:var(--acc);color:var(--ai);border-color:var(--acc)}
-#fab{display:none;position:fixed;right:14px;bottom:calc(128px + env(safe-area-inset-bottom,0px));z-index:27;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.35);padding:10px 16px}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 #pk{display:none;position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;padding-top:env(safe-area-inset-top,0px)}
 #pk .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
@@ -75,7 +74,6 @@ svg.ch{width:100%;height:auto;display:block}
 <main id="app"></main>
 <div id="pk"></div>
 <input id="pcam" type="file" accept="image/*" capture="environment" hidden onchange="setPhoto(this.files[0]);this.value=''">
-<button id="fab" onclick="openChat()" aria-label="Abrir el asistente">✨ Asistente</button>
 <input id="hcam" type="file" accept="image/*" hidden onchange="setLogPhoto(this.files[0]);this.value=''">
 <div id="rb"><span>Descanso <b id="rt"></b></span><button class="g" onclick="adj(-15000)">−15</button><button class="g" onclick="adj(15000)">+15</button><button onclick="adj(0)">Saltar</button></div>
 <nav>
@@ -86,7 +84,7 @@ svg.ch{width:100%;height:auto;display:block}
 </nav>
 <div id="toast" role="status"></div>
 <script>
-const K='hierro-v1';
+const K='hierro-v1';try{localStorage.removeItem('hierro-ak')}catch(e){}
 let S={routines:[],logs:[],draft:null,custom:[],rest:90,img:{},bw:0,sex:'h'};
 try{const r=localStorage.getItem(K);if(r)Object.assign(S,JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){try{toast('No se pudo guardar: memoria llena')}catch(x){}}};
@@ -129,70 +127,14 @@ function importR(){dlg('Importar rutina','',false,'Importar',(ta,o)=>{const m=ta
  try{const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(!d||!Array.isArray(d.e)||!d.e.length)throw 0;
  (d.c||[]).forEach(c=>{if(c&&c.n&&!allEx().some(e=>e.n.toLowerCase()===String(c.n).toLowerCase()))S.custom.push({n:String(c.n),m:Object.keys(LIB).includes(c.m)?c.m:'Otros'})});
  S.routines.push({id:uid(),name:String(d.n||'Rutina').slice(0,60),ex:d.e.map(String).slice(0,60)});save();o.remove();toast('Rutina importada');render()}catch(e){toast('El texto de la rutina no es válido')}},'Pega aquí el texto que te ha enviado tu amigo.')}
-const GUIDE=`Guía de la app Hierro:
-- Entrenar: empiezas un entrenamiento vacío o con una rutina, creas rutinas (+ Nueva rutina), importas o compartes rutinas con un texto y puedes crear un plan automático de rutinas.
-- Durante el entreno: cada ejercicio tiene series con las columnas Anterior (lo que hiciste la última vez; al tocarlo se copia), Kg y Reps, y un ✓ que completa la serie y arranca el temporizador de descanso. Al tocar el número de la serie cambia su tipo: W = calentamiento, A = aproximación; ninguna cuenta para volumen, récords ni rangos. Hay una nota por ejercicio, flechas ▲▼ para ordenar y, al tocar la miniatura del ejercicio, se hace una foto de la máquina. "Terminar" guarda el entreno en el Historial. La pantalla se mantiene encendida durante el entreno si el móvil lo permite.
-- Historial: entrenos con duración, volumen y récords; se pueden repetir, añadirles una foto o borrarlos.
-- Ejercicios: biblioteca de unos 200 ejercicios con filtro por grupo muscular; se crean ejercicios propios con + Crear; cada ejercicio muestra récord, 1RM estimado, gráfica, historial y permite añadir foto.
-- Perfil: estadísticas, rango general con mapa del cuerpo, niveles por músculo, Guía de rangos, entrenos por semana y racha, ajustes (descanso, copia de seguridad y restaurar).
-- Rangos: Bronce, Plata, Oro, Esmeralda, Diamante y Rubí, cada uno con niveles I, II y III. Se calculan por músculo con el mejor 1RM estimado (Epley, hasta 12 reps) dividido por el peso corporal y comparado con una referencia por ejercicio. Hay que escribir el peso corporal en Perfil. Las series W/A, los ejercicios con ayuda y el cardio no cuentan. El rango general es la media de los músculos. Los umbrales son aproximados.
-- Cardio: se apunta con km y minutos y no cuenta para volumen ni rangos.
-- Extras: calculadora de discos (botón durante el entreno), editar un entreno guardado desde el Historial con Editar, registro de peso corporal con gráfica y calendario del mes en el Perfil, y borrar ejercicios propios desde su ficha.
-- Datos: se guardan solo en el navegador del móvil; no hay cuenta ni sincronización. Conviene usar siempre el mismo navegador y hacer copias de seguridad desde Perfil.`;
-let SM=null,CH=[],MSG=[],busy=false,ctl=null;
-const AK='hierro-ak';
-const getKey=()=>{try{return localStorage.getItem(AK)||''}catch(e){return''}};
-function apiSM(){const key=getKey();if(!key)return null;
- return async(input,opts)=>{opts=opts||{};const msgs=(typeof input==='string'?[{role:'user',content:input}]:input).map(m=>({role:m.role,content:m.content})),
-  tl=opts.tools||[],tools=tl.map(t=>({name:t.name,description:t.description,input_schema:t.inputSchema||{type:'object',properties:{}}}));
-  try{for(let n=0;n<5;n++){
-   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:opts.signal,headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(Object.assign({model:'claude-sonnet-5-5',max_tokens:1500,messages:msgs},tools.length?{tools}:{}))});
-   const j=await r.json().catch(()=>({}));
-   if(!r.ok){const e=new Error((j.error&&j.error.message)||'error');e.code=r.status===401?'bad_key':r.status===429?'rate_limited':'api_'+r.status;throw e}
-   const text=j.content.filter(b=>b.type==='text').map(b=>b.text).join(''),uses=j.content.filter(b=>b.type==='tool_use');
-   if(opts.onText&&text)opts.onText({text,delta:text});
-   if(j.stop_reason==='tool_use'&&uses.length){msgs.push({role:'assistant',content:j.content});const res=[];
-    for(const u of uses){const t=tl.find(x=>x.name===u.name);let out,err=false;try{out=String(t?await t.execute(u.input):'herramienta desconocida')}catch(e){out=String(e.message||e);err=true}res.push(Object.assign({type:'tool_result',tool_use_id:u.id,content:out},err?{is_error:true}:{}))}
-    msgs.push({role:'user',content:res});continue}
-   return{text,truncated:j.stop_reason==='max_tokens'}}
-  throw Object.assign(new Error('demasiados pasos'),{code:'tool_loop'})}
-  catch(e){if(e&&e.name==='AbortError')throw Object.assign(new Error('cancelled'),{code:'cancelled'});throw e}}}
-function setKey(v){v=(v||'').trim();try{if(v)localStorage.setItem(AK,v);else localStorage.removeItem(AK)}catch(e){toast('No se pudo guardar');return}SM=v?apiSM():null;toast(v?'Clave guardada':'Clave eliminada');render()}
-function viewKey(){if(window.claude)return'';const k=getKey();
- return '<div class="card"><h2>Asistente con IA</h2><div class="mut" style="margin:6px 0 10px">Para usar el asistente fuera de Claude necesitas tu propia clave de la API de Anthropic (se crea en console.anthropic.com y se paga por uso, unos céntimos por pregunta). Se guarda solo en este móvil y no entra en las copias de seguridad.</div>'+(k?'<div class="mut" style="margin-bottom:8px">Clave guardada: ····'+esc(k.slice(-4))+'</div><button class="d w" onclick="setKey(\'\')">Quitar clave</button>':'<input id="aki" type="password" placeholder="sk-ant-..." aria-label="Clave de la API" autocomplete="off"><button class="w" style="margin-top:8px" onclick="setKey(document.getElementById(\'aki\').value)">Guardar clave</button>')+'<div class="mut" style="margin-top:10px">Consejo: en la consola de Anthropic pon un límite de gasto bajo para esta clave.</div></div>'}
-async function initAI(){try{document.getElementById('fab').style.display='block';if(window.claude&&claude.use)SM=await claude.use('sample');else SM=apiSM()}catch(e){}}
-function ctx(){const L=lvls(),lv=L?Object.keys(L).map(m=>m+': '+lname(L[m].i)).join(', '):'sin peso corporal indicado',
- lg=S.logs.slice(-6).map(l=>fd(l.date)+' '+l.routine+': '+l.entries.map(e=>e.name+' '+e.sets.filter(s=>!s.w).map(s=>s.c?s.kg+'km/'+s.reps+'min':s.kg+'x'+s.reps).join(' ')).join('; ')).join('\n')||'ninguno';
- return 'Eres el asistente de la app de gimnasio Hierro. Responde siempre en español, de forma clara y breve (se lee en un móvil). No uses formato markdown: nada de asteriscos ni almohadillas; usa frases cortas y guiones simples si necesitas una lista. Explicas la app, resuelves dudas de entrenamiento y puedes sugerir cuánto peso subir según los últimos entrenos. No das consejos médicos: ante dolor o lesiones recomienda ver a un profesional. Si te piden crear una rutina, usa la herramienta crear_rutina y luego confirma qué has creado.\n\n'+GUIDE+'\n\nDATOS DEL USUARIO\nRutinas: '+(S.routines.map(r=>r.name+' ['+r.ex.join(', ')+']').join('; ')||'ninguna')+'\nÚltimos entrenos (series en kg x repeticiones):\n'+lg+'\nPeso corporal: '+(S.bw||'no indicado')+' kg\nRangos: '+lv+'\nEjercicios disponibles (usa estos nombres exactos al crear rutinas): '+allEx().map(e=>e.n).join(' | ')}
-async function openChat(){if(!SM&&!window.claude)SM=apiSM();
- if(!SM&&window.claude){try{const pm=await claude.use('permissions');if(pm&&pm.request)await pm.request(['sample']);SM=await claude.use('sample')}catch(e){}}
- if(!SM){if(!window.claude)ask('Para usar el asistente necesitas una clave de la API de Anthropic. Pégala en Perfil, en la tarjeta Asistente con IA.','Ir a Perfil',()=>go('me'));else ask('No puedo conectar con Claude desde esta vista. Abre la app desde su enlace de claude.ai o desde la app de Claude con tu sesión iniciada, espera unos segundos y revisa que el permiso no esté bloqueado en el menú Permisos del artefacto.','Entendido',()=>{});return}
- const o=document.createElement('div');o.className='md';o.style.cssText='align-items:stretch;padding:10px';
- o.innerHTML='<div class="mb" role="dialog" style="max-width:520px;height:100%;display:flex;flex-direction:column;padding:14px"><div class="row sp"><h2>✨ Asistente</h2><div><button class="g" id="cn">Nueva</button><button class="g" id="cx">Cerrar</button></div></div><div id="cl" style="flex:1;overflow:auto;padding:8px 0"></div><div class="fl" id="cs"></div><div class="row"><input id="ci" placeholder="Pregunta lo que quieras" aria-label="Pregunta" enterkeyhint="send"><button id="cb">Enviar</button></div></div>';
- const cl=o.querySelector('#cl'),ci=o.querySelector('#ci'),cb=o.querySelector('#cb'),cs=o.querySelector('#cs');
- const hello='¡Hola! Soy el asistente de Hierro. Te explico cómo funciona la app, tus rangos, resuelvo dudas de entreno, te sugiero qué peso subir o te creo una rutina.';
- const bubble=(r,t)=>{const d=document.createElement('div');d.style.cssText='margin:6px 0;padding:10px 12px;border-radius:14px;white-space:pre-wrap;max-width:88%;'+(r==='u'?'margin-left:auto;background:var(--acc);color:var(--ai)':'background:var(--bg)');d.textContent=t;cl.appendChild(d);cl.scrollTop=cl.scrollHeight;return d};
- const add=(r,t)=>{MSG.push({r,t});return bubble(r,t)};
- const tool={name:'crear_rutina',description:'Crea una rutina en la app del usuario con el nombre y los ejercicios indicados. Usa nombres EXACTOS de la lista de ejercicios disponibles que aparece en el primer mensaje. Devuelve cuántos ejercicios se guardaron.',inputSchema:{type:'object',properties:{nombre:{type:'string'},ejercicios:{type:'array',items:{type:'string'}}},required:['nombre','ejercicios']},
-  execute:i=>{const names=allEx().map(e=>e.n),ex=(i.ejercicios||[]).map(n=>names.find(m=>m.toLowerCase()===String(n).toLowerCase())).filter(Boolean);if(!ex.length)throw new Error('Ningún ejercicio coincide con la biblioteca');S.routines.push({id:uid(),name:String(i.nombre||'Rutina').slice(0,60),ex});save();render();return 'Rutina creada con '+ex.length+' ejercicios'}};
- const chips=()=>{cs.innerHTML=['¿Cómo se sube de rango?','¿Qué peso debería subir?','Créame una rutina de pecho y tríceps'].map(t=>'<button class="fc">'+t+'</button>').join('');cs.querySelectorAll('.fc').forEach(b=>b.onclick=()=>send(b.textContent))};
- const setBusy=v=>{busy=v;cb.textContent=v?'Parar':'Enviar';ci.disabled=v;if(!v)ci.focus()};
- const send=async q=>{q=q.trim();if(!q||busy)return;ci.value='';cs.innerHTML='';add('u',q);
-  CH.push({role:'user',content:CH.length?q:ctx()+'\n\nPregunta del usuario: '+q});
-  const b=add('a','Pensando…'),k=MSG.length-1;setBusy(true);ctl=new AbortController();
-  try{const r=await SM(CH,{cache:false,tools:[tool],signal:ctl.signal,onText:t=>{b.textContent=t.text;cl.scrollTop=cl.scrollHeight}});b.textContent=r.text;MSG[k].t=r.text;CH.push({role:'assistant',content:r.text})}
-  catch(e){const c=e&&e.code;
-   if(c==='cancelled'){const t=(e.text||'').trim()||'Respuesta detenida.';b.textContent=t;MSG[k].t=t;CH.push({role:'assistant',content:t})}
-   else{const t=c==='not_granted'?'No has dado permiso para usar la IA. Recarga la página y acepta cuando te lo pida.':c==='bad_key'?'La clave de Anthropic no es válida o no tiene saldo. Revísala en Perfil, en Asistente con IA.':c==='rate_limited'?'Has hecho demasiadas preguntas seguidas o has llegado a tu límite de uso. Espera un poco y vuelve a intentarlo.':'No he podido responder ('+(c||'error')+'). Pulsa Enviar para intentarlo otra vez.';b.textContent=t;MSG[k].t=t;CH.pop();ci.value=q}}
-  finally{setBusy(false);cl.scrollTop=cl.scrollHeight}};
- if(MSG.length)MSG.forEach(m=>bubble(m.r,m.t));else add('a',hello);
- if(!CH.length)chips();
- cb.textContent=busy?'Parar':'Enviar';ci.disabled=busy;
- cb.onclick=()=>{if(busy&&ctl)ctl.abort();else send(ci.value)};
- ci.onkeydown=e=>{if(e.key==='Enter')send(ci.value)};
- o.querySelector('#cx').onclick=()=>{if(busy&&ctl)ctl.abort();o.remove()};
- o.querySelector('#cn').onclick=()=>{if(busy)return;CH=[];MSG=[];cl.innerHTML='';add('a',hello);chips()};
- document.body.appendChild(o);if(!busy)ci.focus()}
+function recs(n){let w=0,v=0;S.logs.forEach(l=>l.entries.forEach(e=>{if(e.name!==n)return;let s=0;e.sets.forEach(x=>{if(x.w)return;if(x.kg>w)w=x.kg;if(!x.c)s+=x.kg*x.reps});if(s>v)v=s}));return{w,v:Math.round(v)}}
+function recLine(n){const r=recs(n),bx=(t,v)=>'<div style="flex:1;background:var(--bg);border:1px solid var(--acc);border-radius:12px;padding:8px 10px;text-align:center"><div style="font-size:12px;color:var(--mut)">'+t+'</div><div class="big" style="font-size:24px;color:var(--acc)">'+v+'</div></div>';
+ if(!r.w)return '<div class="mut" style="margin-top:8px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;text-align:center">Sin récords todavía: este será tu primer registro</div>';
+ return '<div class="row" style="margin-top:8px;gap:8px">'+(mus(n)==='Cardio'?bx('🏆 Mayor distancia',r.w+' km'):bx('🏆 Peso máximo',r.w+' kg')+bx('📈 Mejor volumen',nf(r.v)+' kg'))+'</div>'}
+function recCheck(e,s){const r=recs(e.name),kg=parseFloat(String(s.kg).replace(',','.'))||0;if(!r.w)return;
+ if(kg>r.w){toast('¡Nuevo récord de peso en '+e.name+': '+kg+' kg! 🏆');return}
+ const v=e.sets.reduce((t,x)=>t+(x.done&&!x.w&&!x.c?(parseFloat(String(x.kg).replace(',','.'))||0)*(parseInt(x.reps,10)||0):0),0);
+ if(v>r.v)toast('¡Nuevo mejor volumen en '+e.name+': '+nf(Math.round(v))+' kg! 🏆')}
 function viewHelp(){const q=[['¿Cómo empiezo un entreno?','En Entrenar pulsa Empezar entrenamiento vacío o elige una de tus rutinas. Rellena kg y reps y toca ✓ al terminar cada serie; al acabar pulsa Terminar.'],['¿Qué significan W y A?','Al tocar el número de una serie cambia su tipo: W es calentamiento y A es aproximación. No cuentan para el volumen, los récords ni los rangos.'],['¿Cómo hago una foto de una máquina?','Durante el entreno toca la miniatura del ejercicio, o entra en Ejercicios, abre el ejercicio y pulsa Hacer foto.'],['¿Cómo funcionan los rangos?','Van de Bronce a Rubí, con niveles I a III. Se calculan con tu mejor 1RM estimado de cada músculo frente a tu peso corporal, que debes escribir en Perfil. Mira la Guía de rangos para ver los requisitos.'],['¿Cómo comparto una rutina?','En Entrenar pulsa Compartir en la rutina y envía el texto. Tu amigo lo pega en Importar.'],['¿Dónde se guardan mis datos?','Solo en el navegador de tu móvil. No hay cuenta ni sincronización, así que usa siempre el mismo navegador y haz copias de seguridad desde Perfil.']];
  return '<div class="card"><h2>Ayuda</h2>'+q.map(x=>'<details style="border-top:1px solid var(--line);padding:8px 0;margin-top:8px"><summary style="font-weight:600">'+x[0]+'</summary><div class="mut" style="margin-top:6px">'+x[1]+'</div></details>').join('')+'</div>'}
 function newR(){S.draft={name:'Nueva rutina',tpl:'new',entries:[]};save();render()}
@@ -211,7 +153,7 @@ function delEx(i){S.draft.entries.splice(i,1);save();render()}
 function warm(i,j){const s=S.draft.entries[i].sets[j];s.w=((+s.w||0)+1)%3;save();render()}
 function fillPrev(i,j){const s=S.draft.entries[i].sets[j],p=(lastSets(S.draft.entries[i].name)||[])[j];if(p){s.kg=p.kg;s.reps=p.reps;save();render()}}
 function tog(i,j){const e=S.draft.entries[i],s=e.sets[j],p=(lastSets(e.name)||[])[j];
- if(!s.done){if(s.kg===''&&p)s.kg=p.kg;if(s.reps===''&&p)s.reps=p.reps;if(s.kg===''||s.reps===''){toast('Rellena kg y reps');return}s.done=true;if(!s.w&&!s.c){rest.end=Date.now()+S.rest*1000;tick()}}else s.done=false;
+ if(!s.done){if(s.kg===''&&p)s.kg=p.kg;if(s.reps===''&&p)s.reps=p.reps;if(s.kg===''||s.reps===''){toast('Rellena kg y reps');return}s.done=true;if(!s.w&&!s.c){rest.end=Date.now()+S.rest*1000;tick();recCheck(e,s)}}else s.done=false;
  save();render()}
 function finish(){const d=S.draft;
  const entries=d.entries.map(e=>({name:e.name,note:(e.note||'').trim(),sets:e.sets.filter(s=>s.done).map(s=>({kg:parseFloat(String(s.kg).replace(',','.'))||0,reps:parseInt(s.reps,10)||0,w:+s.w||0,c:s.c?1:0}))})).filter(e=>e.sets.length);
@@ -249,7 +191,7 @@ function viewTrain(){const d=S.draft;
  const ss=d.entries.flatMap(e=>e.sets.filter(s=>s.done).map(s=>({w:s.w,c:s.c,kg:parseFloat(String(s.kg).replace(',','.'))||0,reps:parseInt(s.reps,10)||0})));
  let h=`<div class="top"><input class="ti" value="${esc(d.name)}" oninput="S.draft.name=this.value;save()" aria-label="Nombre del entrenamiento"><button onclick="finish()">Terminar</button></div>${d.edit?'<div class="mut" style="text-align:center;margin-bottom:6px">Editando un entreno guardado</div>':''}<div class="stats"><div><b id="tm">${dur(Date.now()-d.start)}</b><span>Duración</span></div><div><b>${nf(vol(ss))} kg</b><span>Volumen</span></div><div><b>${ss.filter(s=>!s.w).length}</b><span>Series</span></div></div><div style="text-align:right;margin:-6px 0 6px"><button class="g" onclick="openPlates()">Calculadora de discos</button></div>`;
  d.entries.forEach((e,i)=>{const pv=lastSets(e.name)||[];let n=0;
-  h+=`<div class="card"><div class="row"><button class="g" style="padding:0;min-height:0" data-n="${esc(e.name)}" onclick="snap(this.dataset.n)" aria-label="Hacer foto de ${esc(e.name)}">${thumb(e.name)}</button><div style="flex:1"><h2>${esc(e.name)}</h2><div class="mut">${esc(mus(e.name))}</div></div><button class="g" style="padding:6px" onclick="moveEx(${i},-1)" aria-label="Subir ejercicio">▲</button><button class="g" style="padding:6px" onclick="moveEx(${i},1)" aria-label="Bajar ejercicio">▼</button><button class="d" onclick="delEx(${i})">Quitar</button></div><input aria-label="Nota del ejercicio" placeholder="Nota (ajuste de la máquina, sensaciones…)" value="${esc(e.note||'')}" oninput="S.draft.entries[${i}].note=this.value;save()" style="margin-top:8px;min-height:38px;font-size:14px"><div class="hd"><span>Serie</span><span>Anterior</span><span>${mus(e.name)==='Cardio'?'Km':'Kg'}</span><span>${mus(e.name)==='Cardio'?'Min':'Reps'}</span><span>✓</span></div>`;
+  h+=`<div class="card"><div class="row"><button class="g" style="padding:0;min-height:0" data-n="${esc(e.name)}" onclick="snap(this.dataset.n)" aria-label="Hacer foto de ${esc(e.name)}">${thumb(e.name)}</button><div style="flex:1"><h2>${esc(e.name)}</h2><div class="mut">${esc(mus(e.name))}</div></div><button class="g" style="padding:6px" onclick="moveEx(${i},-1)" aria-label="Subir ejercicio">▲</button><button class="g" style="padding:6px" onclick="moveEx(${i},1)" aria-label="Bajar ejercicio">▼</button><button class="d" onclick="delEx(${i})">Quitar</button></div>${recLine(e.name)}<input aria-label="Nota del ejercicio" placeholder="Nota (ajuste de la máquina, sensaciones…)" value="${esc(e.note||'')}" oninput="S.draft.entries[${i}].note=this.value;save()" style="margin-top:8px;min-height:38px;font-size:14px"><div class="hd"><span>Serie</span><span>Anterior</span><span>${mus(e.name)==='Cardio'?'Km':'Kg'}</span><span>${mus(e.name)==='Cardio'?'Min':'Reps'}</span><span>✓</span></div>`;
   e.sets.forEach((s,j)=>{if(!s.w)n++;const p=pv[j];
    h+=`<div class="set${s.done?' dn':''}" style="margin-top:6px"><button class="sn${s.w?(s.w==2?' wm am':' wm'):''}" onclick="warm(${i},${j})" aria-label="Cambiar el tipo de serie: normal, calentamiento o aproximación">${s.w?(s.w==2?'A':'W'):n}</button><button class="pv" onclick="fillPrev(${i},${j})">${p?p.kg+(mus(e.name)==='Cardio'?'/':'×')+p.reps:'–'}</button><input inputmode="decimal" aria-label="Kilos" placeholder="${p?p.kg:''}" value="${esc(s.kg)}" oninput="setv(${i},${j},'kg',this.value)"><input inputmode="numeric" aria-label="Repeticiones" placeholder="${p?p.reps:''}" value="${esc(s.reps)}" oninput="setv(${i},${j},'reps',this.value)"><button class="ck" onclick="tog(${i},${j})" aria-label="Completar serie">✓</button></div>`});
   h+=`<button class="g w" style="margin-top:6px" onclick="addSet(${i})">+ Añadir serie</button>${i===0?'<div class="mut" style="font-size:12px;text-align:center">Toca el número de una serie para cambiar su tipo: W = calentamiento, A = aproximación. Ninguna cuenta para el volumen, los récords ni los rangos.</div>':''}</div>`});
@@ -308,7 +250,7 @@ function viewMe(){const all=S.logs,cnt={};all.forEach(l=>{const k=mon(l.date);cn
  const tv=all.reduce((t,l)=>t+vol(l.entries.flatMap(e=>e.sets)),0),td=all.reduce((t,l)=>t+(l.dur||0),0);
  return `<h1>Perfil</h1><div class="cols"><div class="card"><div class="big">${all.length}</div><div class="mut">Entrenamientos</div></div><div class="card"><div class="big">${nf(Math.round(tv/1000))} t</div><div class="mut">Volumen total</div></div><div class="card"><div class="big">${hm(td)}</div><div class="mut">Tiempo entrenado</div></div><div class="card"><div class="big">${all.reduce((t,l)=>t+(l.pr||0),0)} 🏆</div><div class="mut">Récords</div></div></div>
  ${viewOv()}${viewLv()}${viewGuide()}<div class="card"><div class="row sp"><h2>Entrenos por semana</h2><b>🔥 ${st} sem.</b></div><svg class="ch" viewBox="0 0 312 112" role="img" aria-label="Entrenamientos por semana">${bars}</svg></div>
- ${viewCal()}${viewBw()}${viewHelp()}${viewKey()}<div class="card"><h2>Ajustes</h2><div class="mut" style="margin:8px 0 4px">Descanso entre series</div><select onchange="S.rest=+this.value;save()">${[45,60,90,120,180,240].map(s=>`<option value="${s}"${s===S.rest?' selected':''}>${s>=60?(s/60)+' min':s+' s'}${s%60&&s>60?'':''}</option>`).join('')}</select><button class="s w" style="margin-top:10px" onclick="backup()">Copiar copia de seguridad</button><textarea id="rs" placeholder="Pega aquí una copia de seguridad para restaurarla" style="width:100%;min-height:70px;margin-top:10px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px"></textarea><button class="s w" style="margin-top:8px" onclick="restore()">Restaurar copia</button></div>`}
+ ${viewCal()}${viewBw()}${viewHelp()}<div class="card"><h2>Ajustes</h2><div class="mut" style="margin:8px 0 4px">Descanso entre series</div><select onchange="S.rest=+this.value;save()">${[45,60,90,120,180,240].map(s=>`<option value="${s}"${s===S.rest?' selected':''}>${s>=60?(s/60)+' min':s+' s'}${s%60&&s>60?'':''}</option>`).join('')}</select><button class="s w" style="margin-top:10px" onclick="backup()">Copiar copia de seguridad</button><textarea id="rs" placeholder="Pega aquí una copia de seguridad para restaurarla" style="width:100%;min-height:70px;margin-top:10px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px"></textarea><button class="s w" style="margin-top:8px" onclick="restore()">Restaurar copia</button></div>`}
 const REF={'Peso muerto':2.5,'Prensa':4,'Hip thrust':2.5,'Press banca':1.5,'Sentadilla':2,'Press militar':1,'Remo con barra':1.25,'Curl con barra':.8};
 const GREF={Pecho:1.5,Espalda:1.4,Pierna:2,Glúteo:2,Hombro:1,Bíceps:.8,Tríceps:.9,Abdominales:.9,Antebrazo:.6};
 const FT=[.10,.17,.24,.32,.39,.46,.54,.61,.68,.76,.83,.90,.98,1.06,1.14,1.22,1.32,1.45];
@@ -364,7 +306,7 @@ function render(){const a=document.getElementById('app'),v={hist:viewHist,train:
 let wl=null,wlFail=false;
 async function wake(){try{const need=S.draft&&!S.draft.tpl;if(need&&!wl&&!wlFail&&'wakeLock' in navigator){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}else if(!need&&wl){await wl.release();wl=null}}catch(e){wl=null;wlFail=true}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wlFail=false;wake()}});
-setInterval(tick,1000);render();initAI();
+setInterval(tick,1000);render();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){})</script>
 </body>
