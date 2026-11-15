@@ -55,6 +55,8 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outli
 .th{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none;display:block}.ph{display:flex;align-items:center;justify-content:center;padding:5px}.ph svg{width:100%;height:100%}.ph.lg{padding:14px}.th.lg{width:100%;height:auto;aspect-ratio:16/10;border-radius:14px;font-size:56px}
 .bar{height:6px;background:var(--bg);border-radius:9px;margin:5px 0;overflow:hidden}.bar i{display:block;height:100%;border-radius:9px}
 .fl{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0}.fc{flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:6px 14px;min-height:36px;font-size:14px}.fc.on{background:var(--acc);color:var(--ai);border-color:var(--acc)}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px}.cg .mut{font-size:10px}
+.cd{background:transparent;color:var(--ink);padding:0;min-height:0;height:21px;border-radius:5px;font-size:11px;font-weight:400}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 #pk{display:none;position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;padding-top:env(safe-area-inset-top,0px)}
 #pk .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
@@ -304,9 +306,24 @@ function viewBw(){const a=S.bwLog||[],u=a[a.length-1];let h='<div class="card"><
  h+=a.length?chart(a.map(x=>({max:x.kg}))):'<div class="mut">Registra tu peso para ver cómo evoluciona. También lo usan tus rangos.</div>';
  if(u){const dif=Math.round((u.kg-a[0].kg)*10)/10;h+='<div class="mut" style="margin-top:8px">Último: <b>'+u.kg+' kg</b> · '+fd(u.d)+(a.length>1?' · desde el inicio: '+(dif>0?'+':'')+dif+' kg':'')+'</div>'}
  return h+'</div>'}
-function viewCal(){const n=new Date(),y=n.getFullYear(),m=n.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,days=new Date(y,m+1,0).getDate(),set=new Set(S.logs.filter(l=>{const d=new Date(l.date);return d.getFullYear()===y&&d.getMonth()===m}).map(l=>new Date(l.date).getDate()));
- let c='';for(let i=0;i<first;i++)c+='<span></span>';for(let d=1;d<=days;d++)c+='<span style="padding:6px 0;border-radius:8px;'+(set.has(d)?'background:var(--acc);color:var(--ai);font-weight:700':(d===n.getDate()?'border:1px solid var(--acc)':''))+'">'+d+'</span>';
- return '<div class="card"><div class="row sp"><h2 style="text-transform:capitalize">'+n.toLocaleDateString('es-ES',{month:'long',year:'numeric'})+'</h2><span class="mut">'+set.size+' días entrenados</span></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-top:10px;font-size:14px">'+['L','M','X','J','V','S','D'].map(x=>'<span class="mut">'+x+'</span>').join('')+c+'</div></div>'}
+let calY=new Date().getFullYear();
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function calDay(k){const ls=S.logs.filter(l=>dk(l.date)===k);if(!ls.length)return;const o=document.createElement('div');o.className='md';
+ o.innerHTML='<div class="mb" role="dialog"><h2></h2><div class="cdl" style="margin:10px 0"></div><button class="s w">Cerrar</button></div>';
+ o.querySelector('h2').textContent=new Date(k+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+ o.querySelector('.cdl').innerHTML=ls.map(l=>'<div class="row sp" style="padding:8px 0;border-top:1px solid var(--line)"><b>'+esc(l.routine)+'</b><span class="mut">'+(l.dur?hm(l.dur)+' · ':'')+nf(vol(l.entries.flatMap(e=>e.sets)))+' kg</span></div>').join('');
+ o.querySelector('button').onclick=()=>o.remove();document.body.appendChild(o)}
+function viewCal(){const Y=calY,cnt={};S.logs.forEach(l=>{const k=dk(l.date);cnt[k]=(cnt[k]||0)+1});
+ let ds=0,ent=0;Object.keys(cnt).forEach(k=>{if(+k.slice(0,4)===Y){ds++;ent+=cnt[k]}});
+ const now=dk(Date.now());let m='';
+ for(let mo=0;mo<12;mo++){const first=(new Date(Y,mo,1).getDay()+6)%7,days=new Date(Y,mo+1,0).getDate();
+  let c=['L','M','X','J','V','S','D'].map(x=>'<span class="mut">'+x+'</span>').join('');for(let i=0;i<first;i++)c+='<span></span>';
+  for(let d=1;d<=days;d++){const k=Y+'-'+p2(mo+1)+'-'+p2(d),n=cnt[k]||0;
+   c+='<button class="cd" onclick="calDay(\''+k+'\')" aria-label="'+d+' de '+MESES[mo]+(n?': '+n+(n>1?' entrenos':' entreno'):'')+'" style="'+(n?'background:var(--acc);color:var(--ai);font-weight:700;opacity:'+(n>1?1:.7)+';':'')+(k===now?'outline:1.5px solid var(--acc);':'')+'">'+d+'</button>'}
+  m+='<div><div style="font-weight:700;margin-bottom:4px">'+MESES[mo]+'</div><div class="cg">'+c+'</div></div>'}
+ return '<div class="card"><div class="row sp"><button class="g" onclick="calY--;render()" aria-label="Año anterior">‹</button><h2>'+Y+'</h2><button class="g" onclick="calY++;render()" aria-label="Año siguiente">›</button></div><div class="mut" style="text-align:center;margin:2px 0 12px">'+ds+(ds===1?' día entrenado':' días entrenados')+' · '+ent+(ent===1?' entreno':' entrenos')+'</div>'
+  +(Y!==new Date().getFullYear()?'<button class="g w" style="margin-bottom:8px" onclick="calY=new Date().getFullYear();render()">Ir a este año</button>':'')
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 16px">'+m+'</div><div class="mut" style="margin-top:12px;font-size:13px">Toca un día marcado para ver qué entrenaste. Color más fuerte: más de un entreno ese día.</div></div>'}
 function repeatL(id){if(S.draft){toast('Termina o descarta el entreno en curso');return}const l=S.logs.find(x=>x.id===id);S.draft={name:l.routine,start:Date.now(),tpl:'',entries:l.entries.map(e=>mk(e.name))};save();tab='train';render()}
 let photoLog='';function snapLog(id){photoLog=id;document.getElementById('hcam').click()}
 function setLogPhoto(f){if(!f)return;const id=photoLog;photoLog='';const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),k=Math.min(1,640/Math.max(im.width,im.height));c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);const l=S.logs.find(x=>x.id===id);if(l){l.photo=c.toDataURL('image/jpeg',.7);save();render();toast('Foto guardada')}};im.onerror=()=>toast('No se pudo leer la imagen');im.src=r.result};r.readAsDataURL(f)}
